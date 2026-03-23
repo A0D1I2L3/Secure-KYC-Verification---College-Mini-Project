@@ -43,6 +43,10 @@ body{font-family:'IBM Plex Sans',sans-serif;overflow-x:hidden;background:${CF.bg
 .hero-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:4rem;align-items:center;}
 .aadhaar-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:4rem;align-items:start;}
 
+/* code block scroll */
+.cf-code-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.cf-code-line{white-space:pre;min-height:1.8rem;font-size:0.85rem;}
+
 /* tablet */
 @media(max-width:1024px){
   html{font-size:17px;}
@@ -55,13 +59,27 @@ body{font-family:'IBM Plex Sans',sans-serif;overflow-x:hidden;background:${CF.bg
 
 /* mobile */
 @media(max-width:640px){
-  html{font-size:16px;}
-  .inner{padding:0 1.25rem;}
-  .sec{padding:5rem 0;}
+  html{font-size:15px;}
+  .inner{padding:0 1rem;}
+  .sec{padding:4rem 0;min-height:auto;}
   .feat-grid{grid-template-columns:1fr;}
   .faq-grid{grid-template-columns:1fr;}
   .nav-links{display:none!important;}
   .hero-stats{flex-direction:column;gap:1.5rem!important;}
+  .npm-box{flex-direction:column;align-items:stretch!important;}
+  .npm-box-copy{border-left:none!important;border-top:1px solid ${CF.border}!important;text-align:center;padding:0.6rem!important;}
+  .pipeline-tags{flex-direction:column;align-items:flex-start!important;}
+  .cf-code-line{font-size:0.78rem;}
+  .nav-npm{display:none!important;}
+  .hero-chips{flex-wrap:wrap;}
+  .two-col-steps{gap:2rem!important;}
+  .authority-code-blocks{gap:1rem!important;}
+}
+
+/* very small */
+@media(max-width:360px){
+  html{font-size:13px;}
+  .inner{padding:0 0.75rem;}
 }
 
 .cursor::after{content:'▋';animation:blink 1.1s step-end infinite;color:${CF.teal};}
@@ -326,6 +344,8 @@ function CfCode({ tabs, label, showCursor }) {
         border: `1px solid ${CF.border}`,
         background: CF.bg1,
         fontFamily: "'IBM Plex Mono',monospace",
+        minWidth: 0, // prevent overflow in grid
+        width: "100%",
       }}
     >
       {/* Tab bar */}
@@ -336,6 +356,8 @@ function CfCode({ tabs, label, showCursor }) {
           background: CF.bg2,
           borderBottom: `1px solid ${CF.border}`,
           overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
         }}
       >
         <div
@@ -352,8 +374,8 @@ function CfCode({ tabs, label, showCursor }) {
             <div
               key={c}
               style={{
-                width: 11,
-                height: 11,
+                width: 10,
+                height: 10,
                 borderRadius: "50%",
                 background: c,
                 opacity: 0.65,
@@ -367,7 +389,7 @@ function CfCode({ tabs, label, showCursor }) {
               key={k}
               onClick={() => setActive(k)}
               style={{
-                padding: "0.6rem 1.1rem",
+                padding: "0.6rem 0.9rem",
                 background: active === k ? CF.bg1 : "transparent",
                 color: active === k ? CF.text : CF.textDim,
                 border: "none",
@@ -377,10 +399,11 @@ function CfCode({ tabs, label, showCursor }) {
                     ? `2px solid ${CF.teal}`
                     : "2px solid transparent",
                 fontFamily: "'IBM Plex Mono',monospace",
-                fontSize: "0.78rem",
+                fontSize: "0.72rem",
                 cursor: "pointer",
                 transition: "all .1s",
                 whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {k}
@@ -400,14 +423,14 @@ function CfCode({ tabs, label, showCursor }) {
       </div>
 
       {/* Content */}
-      <div style={{ display: "flex" }}>
+      <div style={{ display: "flex", overflow: "hidden" }}>
         {/* Gutter */}
         <div
           style={{
             background: CF.bg2,
             borderRight: `1px solid ${CF.border}`,
             padding: "1rem 0",
-            minWidth: 44,
+            minWidth: 38,
             userSelect: "none",
             flexShrink: 0,
           }}
@@ -416,9 +439,9 @@ function CfCode({ tabs, label, showCursor }) {
             <div
               key={i}
               style={{
-                padding: "0 10px 0 6px",
+                padding: "0 8px 0 4px",
                 lineHeight: "1.8rem",
-                fontSize: "0.72rem",
+                fontSize: "0.68rem",
                 color: CF.textDim,
                 textAlign: "right",
               }}
@@ -427,24 +450,18 @@ function CfCode({ tabs, label, showCursor }) {
             </div>
           ))}
         </div>
-        {/* Code */}
+        {/* Code — scrollable horizontally */}
         <div
+          className="cf-code-scroll"
           style={{
-            padding: "1rem 1.25rem",
+            padding: "1rem 1rem",
             lineHeight: "1.8rem",
-            overflowX: "auto",
             flex: 1,
+            minWidth: 0,
           }}
         >
           {lines.map((toks, i) => (
-            <div
-              key={i}
-              style={{
-                whiteSpace: "pre",
-                minHeight: "1.8rem",
-                fontSize: "0.85rem",
-              }}
-            >
+            <div key={i} className="cf-code-line">
               {toks.length === 0
                 ? "\u00a0"
                 : toks.map((t, j) => (
@@ -484,6 +501,19 @@ function useReveal() {
   return ref;
 }
 
+// Hook to get window width reactively
+function useWindowWidth() {
+  const [width, setWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200,
+  );
+  useEffect(() => {
+    const handle = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+  return width;
+}
+
 const HR = () => <div style={{ height: 1, background: CF.border }} />;
 
 function Chip({ children, hi }) {
@@ -492,9 +522,9 @@ function Chip({ children, hi }) {
       className="mono"
       style={{
         display: "inline-block",
-        fontSize: "0.72rem",
+        fontSize: "0.7rem",
         fontWeight: 500,
-        padding: "0.22rem 0.65rem",
+        padding: "0.2rem 0.55rem",
         background: hi ? `${CF.teal}16` : CF.bg3,
         color: hi ? CF.teal : CF.textDim,
         border: `1px solid ${hi ? CF.teal + "44" : CF.border}`,
@@ -512,7 +542,7 @@ function SectionLabel({ children }) {
     <div
       className="mono"
       style={{
-        fontSize: "0.75rem",
+        fontSize: "0.72rem",
         color: CF.teal,
         letterSpacing: "0.12em",
         textTransform: "uppercase",
@@ -529,9 +559,9 @@ function H2({ children }) {
     <h2
       style={{
         fontFamily: "'IBM Plex Mono',monospace",
-        fontSize: "clamp(1.75rem,3vw,2.5rem)",
+        fontSize: "clamp(1.4rem,4vw,2.5rem)",
         fontWeight: 400,
-        marginBottom: "2.5rem",
+        marginBottom: "2rem",
         lineHeight: 1.15,
       }}
     >
@@ -544,30 +574,43 @@ function NpmBox() {
   const [cp, setCp] = useState(false);
   return (
     <div
+      className="npm-box"
       style={{
         display: "inline-flex",
         alignItems: "stretch",
         border: `1px solid ${CF.border}`,
         background: CF.bg1,
         overflow: "hidden",
+        maxWidth: "100%",
       }}
     >
       <div
         className="mono"
         style={{
-          padding: "0.75rem 1.25rem",
-          fontSize: "0.95rem",
+          padding: "0.65rem 1rem",
+          fontSize: "clamp(0.78rem,2vw,0.95rem)",
           color: CF.textMid,
           display: "flex",
           alignItems: "center",
           gap: 6,
+          overflow: "hidden",
+          minWidth: 0,
         }}
       >
-        <span style={{ color: CF.textDim }}>$ </span>
-        <span>npm install </span>
-        <span style={{ color: CF.teal, fontWeight: 500 }}>kyc-encrypt</span>
+        <span style={{ color: CF.textDim, flexShrink: 0 }}>$ </span>
+        <span
+          style={{
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          npm install{" "}
+          <span style={{ color: CF.teal, fontWeight: 500 }}>kyc-encrypt</span>
+        </span>
       </div>
       <button
+        className="npm-box-copy"
         onClick={() => {
           navigator.clipboard
             .writeText("npm install kyc-encrypt")
@@ -581,12 +624,13 @@ function NpmBox() {
           background: cp ? CF.teal : `${CF.teal}14`,
           color: cp ? CF.bg : CF.teal,
           fontFamily: "'IBM Plex Mono',monospace",
-          fontSize: "0.8rem",
+          fontSize: "0.78rem",
           fontWeight: 500,
-          padding: "0 1.1rem",
+          padding: "0 1rem",
           cursor: "pointer",
           transition: "all .14s",
           whiteSpace: "nowrap",
+          flexShrink: 0,
         }}
       >
         {cp ? "Copied!" : "Copy"}
@@ -595,7 +639,7 @@ function NpmBox() {
   );
 }
 
-function Pipeline() {
+function Pipeline({ isMobile }) {
   const rows = [
     { label: "KYC plaintext", tag: "JSON", col: CF.green },
     { label: "Authority 1 — Bank", tags: ["AES-256-GCM", "RSA-2048-OAEP"] },
@@ -611,24 +655,26 @@ function Pipeline() {
       style={{
         border: `1px solid ${CF.border}`,
         background: CF.bg1,
-        position: "sticky",
+        position: isMobile ? "static" : "sticky",
         top: 72,
       }}
     >
       <div
         style={{
-          padding: "0.7rem 1.1rem",
+          padding: "0.7rem 1rem",
           background: CF.bg2,
           borderBottom: `1px solid ${CF.border}`,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
         }}
       >
         <span
           className="mono"
           style={{
-            fontSize: "0.72rem",
+            fontSize: "0.7rem",
             color: CF.textDim,
             letterSpacing: "0.08em",
           }}
@@ -637,16 +683,16 @@ function Pipeline() {
         </span>
         <Chip>N=3 authorities</Chip>
       </div>
-      <div style={{ padding: "1rem" }}>
+      <div style={{ padding: "0.85rem" }}>
         {rows.map((r, i) => (
           <div key={i}>
             {i > 0 && (
               <div
                 style={{
                   textAlign: "center",
-                  fontSize: "0.72rem",
+                  fontSize: "0.7rem",
                   color: CF.textDim,
-                  padding: "0.22rem 0",
+                  padding: "0.18rem 0",
                   fontFamily: "'IBM Plex Mono',monospace",
                 }}
               >
@@ -654,23 +700,27 @@ function Pipeline() {
               </div>
             )}
             <div
+              className="pipeline-row"
               style={{
                 border: `1px solid ${r.col ? r.col + "40" : CF.border}`,
                 borderLeft: r.tags ? `3px solid ${CF.teal}` : undefined,
-                padding: "0.65rem 1rem",
+                padding: "0.55rem 0.85rem",
                 background: r.col ? `${r.col}09` : CF.bg2,
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-start",
                 justifyContent: "space-between",
                 gap: 8,
                 flexWrap: "wrap",
                 fontFamily: "'IBM Plex Mono',monospace",
-                fontSize: "0.8rem",
+                fontSize: "0.78rem",
                 color: r.col || CF.textMid,
               }}
             >
-              <span>{r.label}</span>
-              <div style={{ display: "flex", gap: 5 }}>
+              <span style={{ flexShrink: 0 }}>{r.label}</span>
+              <div
+                className="pipeline-tags"
+                style={{ display: "flex", gap: 5, flexWrap: "wrap" }}
+              >
                 {r.tags ? (
                   r.tags.map((tg) => <Chip key={tg}>{tg}</Chip>)
                 ) : (
@@ -683,14 +733,19 @@ function Pipeline() {
       </div>
       <div
         style={{
-          padding: "0.7rem 1.1rem",
+          padding: "0.65rem 1rem",
           borderTop: `1px solid ${CF.border}`,
           background: CF.bg2,
         }}
       >
         <div
           className="mono"
-          style={{ fontSize: "0.68rem", color: CF.textDim, lineHeight: 1.85 }}
+          style={{
+            fontSize: "0.65rem",
+            color: CF.textDim,
+            lineHeight: 1.85,
+            wordBreak: "break-all",
+          }}
         >
           <span style={{ color: CF.teal }}>Format: </span>[4B
           keyLen][wrappedKey][12B nonce][16B authTag][ct]
@@ -703,6 +758,10 @@ function Pipeline() {
 /* ── MAIN APP ─────────────────────────────────────────────── */
 export default function App() {
   const [step, setStep] = useState(0);
+  const w = useWindowWidth();
+  const isMobile = w <= 640;
+  const isTablet = w <= 1024;
+
   const rFeat = useReveal(),
     rHiw = useReveal(),
     rAad = useReveal(),
@@ -851,23 +910,25 @@ export default function App() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            height: 64,
+            height: 56,
+            gap: 12,
           }}
         >
           <span
             className="mono"
             style={{
-              fontSize: "1rem",
+              fontSize: "clamp(0.85rem,2vw,1rem)",
               fontWeight: 500,
               color: CF.teal,
               letterSpacing: "0.02em",
+              flexShrink: 0,
             }}
           >
             kyc-encrypt
           </span>
           <div
             className="nav-links"
-            style={{ display: "flex", gap: "0.15rem" }}
+            style={{ display: "flex", gap: "0.1rem", overflow: "hidden" }}
           >
             {[
               ["Features", "#features"],
@@ -880,12 +941,12 @@ export default function App() {
                 key={l}
                 href={h}
                 style={{
-                  fontSize: "0.9rem",
+                  fontSize: "0.85rem",
                   color: CF.textDim,
                   textDecoration: "none",
-                  padding: "0.4rem 0.85rem",
+                  padding: "0.4rem 0.7rem",
                   transition: "color .1s",
-                  borderRadius: 2,
+                  whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => (e.target.style.color = CF.text)}
                 onMouseLeave={(e) => (e.target.style.color = CF.textDim)}
@@ -894,21 +955,34 @@ export default function App() {
               </a>
             ))}
           </div>
-          <NpmBox />
+          <div className="nav-npm" style={{ flexShrink: 0 }}>
+            <NpmBox />
+          </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="sec" style={{ paddingTop: "9rem" }}>
+      <section
+        className="sec"
+        style={{ paddingTop: isMobile ? "5.5rem" : "8rem" }}
+      >
         <div className="inner">
-          <div className="hero-grid">
-            <div style={{ animation: "fadeUp .5s ease both" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isTablet ? "1fr" : "1fr 1.1fr",
+              gap: isMobile ? "2.5rem" : "4rem",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ animation: "fadeUp .5s ease both", minWidth: 0 }}>
               <div
+                className="hero-chips"
                 style={{
                   display: "flex",
                   gap: "0.5rem",
                   flexWrap: "wrap",
-                  marginBottom: "1.75rem",
+                  marginBottom: "1.5rem",
                 }}
               >
                 <Chip hi>v1.0</Chip>
@@ -918,11 +992,11 @@ export default function App() {
               <h1
                 style={{
                   fontFamily: "'IBM Plex Mono',monospace",
-                  fontSize: "clamp(2.2rem,4.5vw,3.75rem)",
+                  fontSize: "clamp(1.8rem,5vw,3.75rem)",
                   fontWeight: 400,
                   lineHeight: 1.08,
                   letterSpacing: "-0.025em",
-                  marginBottom: "1.5rem",
+                  marginBottom: "1.25rem",
                 }}
               >
                 Hybrid encryption
@@ -931,11 +1005,11 @@ export default function App() {
               </h1>
               <p
                 style={{
-                  fontSize: "clamp(1rem,1.5vw,1.15rem)",
+                  fontSize: "clamp(0.9rem,2vw,1.1rem)",
                   color: CF.textDim,
                   maxWidth: 480,
                   lineHeight: 1.8,
-                  marginBottom: "2.5rem",
+                  marginBottom: "2rem",
                 }}
               >
                 AES-256-GCM + RSA-2048-OAEP, stacked independently per
@@ -945,7 +1019,11 @@ export default function App() {
 
               <div
                 className="hero-stats"
-                style={{ display: "flex", gap: "3rem", flexWrap: "wrap" }}
+                style={{
+                  display: "flex",
+                  gap: isMobile ? "1.25rem" : "2.5rem",
+                  flexWrap: "wrap",
+                }}
               >
                 {[
                   ["&lt;100ms", "3 auth / 5 KB"],
@@ -957,21 +1035,34 @@ export default function App() {
                     <div
                       className="mono"
                       style={{
-                        fontSize: "clamp(1rem,1.6vw,1.25rem)",
+                        fontSize: "clamp(0.9rem,2vw,1.2rem)",
                         color: CF.teal,
-                        marginBottom: 4,
+                        marginBottom: 3,
                       }}
                       dangerouslySetInnerHTML={{ __html: v }}
                     />
-                    <div style={{ fontSize: "0.82rem", color: CF.textDim }}>
+                    <div style={{ fontSize: "0.78rem", color: CF.textDim }}>
                       {l}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Show npm box here on mobile since nav hides it */}
+              {isMobile && (
+                <div style={{ marginTop: "2rem" }}>
+                  <NpmBox />
+                </div>
+              )}
             </div>
 
-            <div style={{ animation: "fadeUp .5s .12s ease both" }}>
+            <div
+              style={{
+                animation: "fadeUp .5s .12s ease both",
+                minWidth: 0,
+                width: "100%",
+              }}
+            >
               <CfCode
                 tabs={{
                   Encrypt: EX.encrypt,
@@ -990,12 +1081,12 @@ export default function App() {
       {/* ── FEATURES ── */}
       <section id="features" ref={rFeat} className="sec">
         <div className="inner">
-          <div className="reveal" style={{ marginBottom: "3rem" }}>
+          <div className="reveal" style={{ marginBottom: "2.5rem" }}>
             <SectionLabel>Features</SectionLabel>
             <H2>NIST-approved primitives only.</H2>
             <p
               style={{
-                fontSize: "1rem",
+                fontSize: "clamp(0.88rem,2vw,1rem)",
                 color: CF.textDim,
                 maxWidth: 560,
                 lineHeight: 1.75,
@@ -1017,31 +1108,31 @@ export default function App() {
               <div
                 key={i}
                 style={{
-                  padding: "2rem",
+                  padding: isMobile ? "1.5rem" : "2rem",
                   borderRight: `1px solid ${CF.border}`,
                   borderBottom: `1px solid ${CF.border}`,
                 }}
               >
-                <div style={{ fontSize: "1.6rem", marginBottom: "1rem" }}>
+                <div style={{ fontSize: "1.4rem", marginBottom: "0.85rem" }}>
                   {f.icon}
                 </div>
                 <div
                   className="mono"
                   style={{
-                    fontSize: "0.9rem",
+                    fontSize: "0.88rem",
                     fontWeight: 500,
                     color: CF.text,
-                    marginBottom: "0.65rem",
+                    marginBottom: "0.55rem",
                   }}
                 >
                   {f.title}
                 </div>
                 <p
                   style={{
-                    fontSize: "0.9rem",
+                    fontSize: "0.88rem",
                     color: CF.textDim,
                     lineHeight: 1.7,
-                    marginBottom: "1.1rem",
+                    marginBottom: "1rem",
                   }}
                 >
                   {f.desc}
@@ -1071,21 +1162,30 @@ export default function App() {
         style={{ background: CF.bg1 }}
       >
         <div className="inner">
-          <div className="reveal" style={{ marginBottom: "3rem" }}>
+          <div className="reveal" style={{ marginBottom: "2.5rem" }}>
             <SectionLabel>How it works</SectionLabel>
             <H2>Layer by layer.</H2>
           </div>
-          <div className="two-col">
-            <div className="reveal">
-              {/* Steps */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isTablet ? "1fr" : "1fr 1fr",
+              gap: isMobile ? "2rem" : "4rem",
+              alignItems: "start",
+              minWidth: 0,
+            }}
+          >
+            {/* LEFT — steps + inline snippets */}
+            <div className="reveal" style={{ minWidth: 0 }}>
+              {/* Steps accordion */}
               {steps.map((s, i) => (
                 <div
                   key={i}
                   onClick={() => setStep(i)}
                   style={{
                     borderLeft: `3px solid ${step === i ? CF.teal : CF.border}`,
-                    paddingLeft: "1.25rem",
-                    marginBottom: "1.5rem",
+                    paddingLeft: "1.1rem",
+                    marginBottom: "1.25rem",
                     cursor: "pointer",
                     transition: "border-color .2s",
                   }}
@@ -1093,43 +1193,48 @@ export default function App() {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
                       gap: 10,
-                      marginBottom: step === i ? "0.6rem" : 0,
+                      marginBottom: step === i ? "0.5rem" : 0,
                     }}
                   >
                     <span
                       className="mono"
                       style={{
-                        fontSize: "0.75rem",
+                        fontSize: "0.72rem",
                         color: step === i ? CF.teal : CF.textDim,
+                        flexShrink: 0,
+                        paddingTop: "0.18rem",
                       }}
                     >
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span
                       style={{
-                        fontSize: "1rem",
+                        fontSize: "clamp(0.88rem,2vw,1rem)",
                         fontWeight: step === i ? 500 : 400,
                         color: step === i ? CF.text : CF.textMid,
+                        lineHeight: 1.4,
                       }}
                     >
                       {s.title}
                     </span>
                   </div>
+                  {/* Use auto height trick — max-height large enough to never clip */}
                   <div
                     style={{
-                      maxHeight: step === i ? 160 : 0,
+                      maxHeight: step === i ? 300 : 0,
                       overflow: "hidden",
-                      transition: "max-height .32s ease",
+                      transition: "max-height .35s ease",
                     }}
                   >
                     <p
                       style={{
-                        fontSize: "0.9rem",
+                        fontSize: "0.88rem",
                         color: CF.textDim,
                         lineHeight: 1.75,
                         paddingTop: "0.25rem",
+                        paddingRight: "0.5rem",
                       }}
                     >
                       {s.body}
@@ -1138,140 +1243,169 @@ export default function App() {
                 </div>
               ))}
 
-              {/* Two-role code snippets */}
-              <div style={{ marginTop: "2.5rem" }}>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: "0.7rem",
-                    color: CF.textDim,
-                    letterSpacing: "0.08em",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  AUTHORITY SIDE
+              {/* Pipeline — shown here on mobile/tablet, after steps */}
+              {isTablet && (
+                <div style={{ marginTop: "2rem", marginBottom: "2rem" }}>
+                  <Pipeline isMobile={true} />
                 </div>
-                <div
-                  style={{
-                    border: `1px solid ${CF.border}`,
-                    background: CF.bg2,
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "0.6rem 0.9rem",
-                      borderBottom: `1px solid ${CF.border}`,
-                    }}
-                  >
-                    <span
-                      className="mono"
-                      style={{ fontSize: "0.72rem", color: CF.textDim }}
-                    >
-                      authority-1/generate.js
-                    </span>
-                  </div>
+              )}
+
+              {/* Two-role inline code snippets */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1.25rem",
+                  marginTop: isTablet ? 0 : "2rem",
+                }}
+              >
+                {/* Authority side */}
+                <div style={{ minWidth: 0 }}>
                   <div
                     className="mono"
                     style={{
-                      padding: "0.9rem 1.1rem",
-                      fontSize: "0.82rem",
-                      lineHeight: "1.8rem",
+                      fontSize: "0.68rem",
                       color: CF.textDim,
+                      letterSpacing: "0.08em",
+                      marginBottom: "0.6rem",
                     }}
                   >
-                    <div>
-                      <span style={{ color: CF.purple }}>const </span>
-                      <span style={{ color: CF.textMid }}>pair </span>
-                      <span style={{ color: CF.op }}>= await </span>
-                      <span style={{ color: CF.textMid }}>kyc.</span>
-                      <span style={{ color: CF.blue }}>
-                        generateAuthorityKeyPair
+                    AUTHORITY SIDE
+                  </div>
+                  <div
+                    style={{
+                      border: `1px solid ${CF.border}`,
+                      background: CF.bg2,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "0.55rem 0.85rem",
+                        borderBottom: `1px solid ${CF.border}`,
+                      }}
+                    >
+                      <span
+                        className="mono"
+                        style={{ fontSize: "0.7rem", color: CF.textDim }}
+                      >
+                        authority-1/generate.js
                       </span>
-                      <span>{"({"}</span>
-                      <span style={{ color: CF.cyan }}>outputDir</span>
-                      <span>{": "}</span>
-                      <span style={{ color: CF.green }}>'./auth-1'</span>
-                      <span>{"});"}</span>
                     </div>
-                    <div style={{ color: CF.comment }}>
-                      {"// pub.pem → share with app  |  priv.pem → stays local"}
-                    </div>
-                    <div style={{ marginTop: "0.3rem" }}>
-                      <span style={{ color: CF.purple }}>const </span>
-                      <span style={{ color: CF.textMid }}>inner </span>
-                      <span style={{ color: CF.op }}>= </span>
-                      <span style={{ color: CF.textMid }}>kyc.</span>
-                      <span style={{ color: CF.blue }}>
-                        decryptAuthorityLayer
-                      </span>
-                      <span>{"(ciphertext, pair.privateKey);"}</span>
+                    <div
+                      className="cf-code-scroll mono"
+                      style={{
+                        padding: "0.85rem 1rem",
+                        fontSize: "0.8rem",
+                        lineHeight: "1.75rem",
+                        color: CF.textDim,
+                      }}
+                    >
+                      <div style={{ whiteSpace: "pre" }}>
+                        <span style={{ color: CF.purple }}>const </span>
+                        <span style={{ color: CF.textMid }}>pair </span>
+                        <span style={{ color: CF.op }}>= await </span>
+                        <span style={{ color: CF.textMid }}>kyc.</span>
+                        <span style={{ color: CF.blue }}>
+                          generateAuthorityKeyPair
+                        </span>
+                        <span>{"({"}</span>
+                        <span style={{ color: CF.cyan }}>outputDir</span>
+                        <span>{": "}</span>
+                        <span style={{ color: CF.green }}>'./auth-1'</span>
+                        <span>{"});"}</span>
+                      </div>
+                      <div style={{ color: CF.comment, whiteSpace: "pre" }}>
+                        {
+                          "// pub.pem → share with app  |  priv.pem → stays local"
+                        }
+                      </div>
+                      <div style={{ marginTop: "0.3rem", whiteSpace: "pre" }}>
+                        <span style={{ color: CF.purple }}>const </span>
+                        <span style={{ color: CF.textMid }}>inner </span>
+                        <span style={{ color: CF.op }}>= </span>
+                        <span style={{ color: CF.textMid }}>kyc.</span>
+                        <span style={{ color: CF.blue }}>
+                          decryptAuthorityLayer
+                        </span>
+                        <span>{"(ciphertext, pair.privateKey);"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: "0.7rem",
-                    color: CF.textDim,
-                    letterSpacing: "0.08em",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  APP SIDE
-                </div>
-                <div
-                  style={{
-                    border: `1px solid ${CF.border}`,
-                    background: CF.bg2,
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "0.6rem 0.9rem",
-                      borderBottom: `1px solid ${CF.border}`,
-                    }}
-                  >
-                    <span
-                      className="mono"
-                      style={{ fontSize: "0.72rem", color: CF.textDim }}
-                    >
-                      app/encrypt.js
-                    </span>
-                  </div>
+                {/* App side */}
+                <div style={{ minWidth: 0 }}>
                   <div
                     className="mono"
                     style={{
-                      padding: "0.9rem 1.1rem",
-                      fontSize: "0.82rem",
-                      lineHeight: "1.8rem",
+                      fontSize: "0.68rem",
                       color: CF.textDim,
+                      letterSpacing: "0.08em",
+                      marginBottom: "0.6rem",
                     }}
                   >
-                    <div>
-                      <span style={{ color: CF.purple }}>const </span>
-                      <span style={{ color: CF.textMid }}>enc </span>
-                      <span style={{ color: CF.op }}>= await </span>
-                      <span style={{ color: CF.textMid }}>kyc.</span>
-                      <span style={{ color: CF.blue }}>
-                        encryptWithPublicKeys
+                    APP SIDE
+                  </div>
+                  <div
+                    style={{
+                      border: `1px solid ${CF.border}`,
+                      background: CF.bg2,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "0.55rem 0.85rem",
+                        borderBottom: `1px solid ${CF.border}`,
+                      }}
+                    >
+                      <span
+                        className="mono"
+                        style={{ fontSize: "0.7rem", color: CF.textDim }}
+                      >
+                        app/encrypt.js
                       </span>
-                      <span>{"(payload, [pub1, pub2, pub3]);"}</span>
                     </div>
-                    <div style={{ color: CF.comment }}>
-                      {
-                        "// app never holds any private key  →  Base64 ciphertext"
-                      }
+                    <div
+                      className="cf-code-scroll mono"
+                      style={{
+                        padding: "0.85rem 1rem",
+                        fontSize: "0.8rem",
+                        lineHeight: "1.75rem",
+                        color: CF.textDim,
+                      }}
+                    >
+                      <div style={{ whiteSpace: "pre" }}>
+                        <span style={{ color: CF.purple }}>const </span>
+                        <span style={{ color: CF.textMid }}>enc </span>
+                        <span style={{ color: CF.op }}>= await </span>
+                        <span style={{ color: CF.textMid }}>kyc.</span>
+                        <span style={{ color: CF.blue }}>
+                          encryptWithPublicKeys
+                        </span>
+                        <span>{"(payload, [pub1, pub2, pub3]);"}</span>
+                      </div>
+                      <div style={{ color: CF.comment, whiteSpace: "pre" }}>
+                        {
+                          "// app never holds any private key  →  Base64 ciphertext"
+                        }
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="reveal" style={{ transitionDelay: ".08s" }}>
-              <Pipeline />
-            </div>
+            {/* RIGHT — Pipeline (desktop only; mobile renders it inline above) */}
+            {!isTablet && (
+              <div
+                className="reveal"
+                style={{ transitionDelay: ".08s", minWidth: 0 }}
+              >
+                <Pipeline isMobile={false} />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -1281,12 +1415,12 @@ export default function App() {
       {/* ── AADHAAR ── */}
       <section id="aadhaar" ref={rAad} className="sec">
         <div className="inner">
-          <div className="reveal" style={{ marginBottom: "3rem" }}>
+          <div className="reveal" style={{ marginBottom: "2.5rem" }}>
             <SectionLabel>Aadhaar helpers</SectionLabel>
             <H2>Safe Aadhaar handling, built in.</H2>
             <p
               style={{
-                fontSize: "1rem",
+                fontSize: "clamp(0.88rem,2vw,1rem)",
                 color: CF.textDim,
                 maxWidth: 520,
                 lineHeight: 1.75,
@@ -1297,15 +1431,22 @@ export default function App() {
               multi-authority engine.
             </p>
           </div>
-          <div className="aadhaar-grid">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isTablet ? "1fr" : "1fr 1.2fr",
+              gap: isMobile ? "2rem" : "4rem",
+              alignItems: "start",
+            }}
+          >
             <div className="reveal">
               {aadhaarFns.map((item, i) => (
                 <div
                   key={i}
                   style={{
                     borderLeft: `2px solid ${CF.border}`,
-                    paddingLeft: "1.1rem",
-                    marginBottom: "1.75rem",
+                    paddingLeft: "1rem",
+                    marginBottom: "1.5rem",
                   }}
                 >
                   <div
@@ -1313,13 +1454,17 @@ export default function App() {
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
-                      marginBottom: "0.35rem",
+                      marginBottom: "0.3rem",
                       flexWrap: "wrap",
                     }}
                   >
                     <span
                       className="mono"
-                      style={{ fontSize: "0.85rem", color: CF.blue }}
+                      style={{
+                        fontSize: "clamp(0.75rem,2vw,0.85rem)",
+                        color: CF.blue,
+                        wordBreak: "break-all",
+                      }}
                     >
                       {item.fn}
                     </span>
@@ -1327,7 +1472,7 @@ export default function App() {
                   </div>
                   <p
                     style={{
-                      fontSize: "0.9rem",
+                      fontSize: "0.88rem",
                       color: CF.textDim,
                       lineHeight: 1.7,
                     }}
@@ -1337,7 +1482,10 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className="reveal" style={{ transitionDelay: ".08s" }}>
+            <div
+              className="reveal"
+              style={{ transitionDelay: ".08s", minWidth: 0 }}
+            >
               <CfCode tabs={{ "Aadhaar API": EX.aadhaar }} />
             </div>
           </div>
@@ -1355,7 +1503,7 @@ export default function App() {
             <NpmBox />
             <p
               style={{
-                fontSize: "0.9rem",
+                fontSize: "0.88rem",
                 color: CF.textDim,
                 marginTop: "1rem",
                 maxWidth: 500,
@@ -1386,7 +1534,7 @@ export default function App() {
       {/* ── FAQ ── */}
       <section id="faq" ref={rFaq} className="sec">
         <div className="inner">
-          <div className="reveal" style={{ marginBottom: "3rem" }}>
+          <div className="reveal" style={{ marginBottom: "2.5rem" }}>
             <SectionLabel>FAQ</SectionLabel>
             <H2>Common questions.</H2>
           </div>
@@ -1402,7 +1550,7 @@ export default function App() {
               <div
                 key={i}
                 style={{
-                  padding: "2rem",
+                  padding: isMobile ? "1.5rem" : "2rem",
                   borderRight: `1px solid ${CF.border}`,
                   borderBottom: `1px solid ${CF.border}`,
                 }}
@@ -1410,9 +1558,9 @@ export default function App() {
                 <div
                   className="mono"
                   style={{
-                    fontSize: "0.92rem",
+                    fontSize: "clamp(0.82rem,2vw,0.92rem)",
                     color: CF.text,
-                    marginBottom: "0.8rem",
+                    marginBottom: "0.7rem",
                     lineHeight: 1.45,
                   }}
                 >
@@ -1420,7 +1568,7 @@ export default function App() {
                 </div>
                 <p
                   style={{
-                    fontSize: "0.9rem",
+                    fontSize: "0.88rem",
                     color: CF.textDim,
                     lineHeight: 1.75,
                   }}
@@ -1441,33 +1589,39 @@ export default function App() {
           className="inner"
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: isMobile ? "flex-start" : "center",
             justifyContent: "space-between",
+            flexDirection: isMobile ? "column" : "row",
             flexWrap: "wrap",
-            gap: "1.25rem",
+            gap: "1rem",
           }}
         >
-          <span className="mono" style={{ fontSize: "0.9rem", color: CF.teal }}>
+          <span
+            className="mono"
+            style={{ fontSize: "0.88rem", color: CF.teal }}
+          >
             kyc-encrypt
           </span>
           <span
             style={{
-              fontSize: "0.8rem",
+              fontSize: "0.78rem",
               color: CF.textDim,
-              textAlign: "center",
+              lineHeight: 1.6,
+              order: isMobile ? 3 : 0,
             }}
           >
-            Benhur P Benny · Adil Haneef M K · Sreemrudu K P — GEC Thrissur ·
-            B.Tech CSE · 2026
+            Benhur P Benny · Adil Haneef M K · Sreemrudu K P
+            {isMobile ? <br /> : " — "}
+            GEC Thrissur · B.Tech CSE · 2026
           </span>
-          <div style={{ display: "flex", gap: "1.25rem" }}>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             {["npm", "GitHub", "Docs", "MIT"].map((l) => (
               <a
                 key={l}
                 href="#"
                 style={{
                   fontFamily: "'IBM Plex Mono',monospace",
-                  fontSize: "0.8rem",
+                  fontSize: "0.78rem",
                   color: CF.textDim,
                   textDecoration: "none",
                   transition: "color .1s",
