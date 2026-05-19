@@ -1,0 +1,42 @@
+{
+  "name": "kyc-encrypt",
+  "version": "1.0.0",
+  "description": "Secure hybrid encryption library for KYC data using AES-256-GCM, RSA-2048-OAEP, and multi-authority key flows.",
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "import": "./index.mjs"
+    }
+  },
+  "bin": "./bin/cli.js",
+  "files": [
+    "bin",
+    "src",
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "kyc",
+    "encryption",
+    "crypto",
+    "aes-gcm",
+    "rsa",
+    "shamir",
+    "npm-package"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
