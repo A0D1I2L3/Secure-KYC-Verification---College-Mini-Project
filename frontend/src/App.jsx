@@ -755,6 +755,659 @@ function Pipeline({ isMobile }) {
   );
 }
 
+function DemoSite({ isMobile }) {
+  const [aadhaar, setAadhaar] = useState("2341 2341 2346");
+  const [status, setStatus] = useState("idle");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [selectedTrace, setSelectedTrace] = useState("enc-2");
+
+  const runDemo = async () => {
+    setStatus("running");
+    setError("");
+
+    try {
+      const response = await fetch("/api/demo/aadhaar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aadhaar }),
+      });
+      const body = await response.json();
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.error || "Demo API failed.");
+      }
+
+      const next = body.result;
+      setResult(next);
+      setSelectedTrace("enc-2");
+      setStatus("done");
+    } catch (err) {
+      setResult(null);
+      setError(
+        err.message === "Failed to fetch"
+          ? "Demo API is not running. Start it with npm run demo:api."
+          : err.message || "Demo failed.",
+      );
+      setStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    runDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const previewCipher = result
+    ? `${result.ciphertext.slice(0, 96)}...${result.ciphertext.slice(-24)}`
+    : "Waiting for encrypted output...";
+  const encryptionStages = Array.isArray(result?.encryptionStages)
+    ? result.encryptionStages
+    : [];
+  const hasTraceData =
+    Array.isArray(result?.encryptionStages) &&
+    result.encryptionStages.length > 0 &&
+    Array.isArray(result?.decryptionSteps) &&
+    result.decryptionSteps.length > 0;
+  const decryptionSteps = Array.isArray(result?.decryptionSteps)
+    ? result.decryptionSteps
+    : [
+      {
+        authority: "Regulator",
+        operation: "decryptAuthorityLayer(ciphertext, regulatorPrivateKey)",
+        input: "-",
+        output: "-",
+      },
+      {
+        authority: "Auditor",
+        operation: "decryptAuthorityLayer(afterRegulator, auditorPrivateKey)",
+        input: "-",
+        output: "-",
+      },
+      {
+        authority: "Bank",
+        operation: "reconstructKey(2 of 3 shares) + decryptAuthorityLayer(...)",
+        input: "-",
+        output: "-",
+      },
+    ];
+  const traceItems = result && hasTraceData
+    ? [
+        ...encryptionStages.map((stage, index) => ({
+          ...stage,
+          id: `enc-${index}`,
+          mode: "encrypt",
+          label: `${stage.authority} encrypts`,
+        })),
+        ...decryptionSteps.map((stage, index) => ({
+          ...stage,
+          id: `dec-${index}`,
+          mode: "decrypt",
+          label: `${stage.authority} decrypts`,
+        })),
+      ]
+    : [];
+  const tracePlaceholders = [
+    { id: "enc-0", label: "Bank encrypts", mode: "encrypt" },
+    { id: "enc-1", label: "Auditor encrypts", mode: "encrypt" },
+    { id: "enc-2", label: "Regulator encrypts", mode: "encrypt" },
+    { id: "dec-0", label: "Regulator decrypts", mode: "decrypt" },
+    { id: "dec-1", label: "Auditor decrypts", mode: "decrypt" },
+    { id: "dec-2", label: "Bank decrypts", mode: "decrypt" },
+  ];
+  const activeTrace =
+    traceItems.find((item) => item.id === selectedTrace) ||
+    traceItems[2] ||
+    traceItems[0] ||
+    null;
+  const staleApiMessage =
+    result && !hasTraceData
+      ? "The demo API running right now is stale. Stop it with Ctrl+C and restart npm run demo:api."
+      : null;
+  const traceInput =
+    activeTrace?.input ??
+    staleApiMessage ??
+    (result ? result.validation?.normalized : "Run the demo first.");
+  const traceOutput =
+    activeTrace?.output ??
+    staleApiMessage ??
+    (result ? result.ciphertext : "Run the demo first.");
+  const traceInputText = String(traceInput || "(empty)");
+  const traceOutputText = String(traceOutput || "(empty)");
+  const traceInputBytes =
+    activeTrace?.inputBytes ?? (result ? traceInputText.length : 0);
+  const traceOutputBytes =
+    activeTrace?.outputBytes ?? (result ? traceOutputText.length : 0);
+  const displayTraceInput = `${traceInputText.slice(0, 900)}${
+    traceInputText.length > 900 ? "\n... truncated in UI" : ""
+  }`;
+  const displayTraceOutput = `${traceOutputText.slice(0, 1400)}${
+    traceOutputText.length > 1400 ? "\n... truncated in UI" : ""
+  }`;
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${CF.border}`,
+        background: CF.bg1,
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "0.88fr 1.12fr",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          padding: isMobile ? "1.2rem" : "1.6rem",
+          borderRight: isMobile ? "none" : `1px solid ${CF.border}`,
+          borderBottom: isMobile ? `1px solid ${CF.border}` : "none",
+        }}
+      >
+        <div
+          className="mono"
+          style={{
+            fontSize: "0.68rem",
+            color: CF.textDim,
+            letterSpacing: "0.08em",
+            marginBottom: "0.8rem",
+          }}
+        >
+          LIVE DEMO
+        </div>
+        <label
+          htmlFor="aadhaar-demo"
+          style={{
+            display: "block",
+            color: CF.textMid,
+            fontSize: "0.88rem",
+            marginBottom: "0.55rem",
+          }}
+        >
+          Aadhaar number
+        </label>
+        <input
+          id="aadhaar-demo"
+          value={aadhaar}
+          onChange={(e) => setAadhaar(e.target.value)}
+          inputMode="numeric"
+          autoComplete="off"
+          style={{
+            width: "100%",
+            border: `1px solid ${status === "error" ? CF.pink : CF.border}`,
+            background: CF.bg,
+            color: CF.text,
+            padding: "0.8rem 0.9rem",
+            fontFamily: "'IBM Plex Mono',monospace",
+            fontSize: "1rem",
+            outline: "none",
+            marginBottom: "0.8rem",
+          }}
+        />
+        <button
+          onClick={runDemo}
+          disabled={status === "running"}
+          style={{
+            width: "100%",
+            border: `1px solid ${CF.teal}`,
+            background: status === "running" ? CF.bg3 : CF.teal,
+            color: status === "running" ? CF.textDim : CF.bg,
+            padding: "0.75rem 1rem",
+            fontFamily: "'IBM Plex Mono',monospace",
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            cursor: status === "running" ? "wait" : "pointer",
+            transition: "all .14s",
+          }}
+        >
+          {status === "running" ? "Running crypto..." : "Run library flow"}
+        </button>
+        {error && (
+          <p
+            style={{
+              marginTop: "0.8rem",
+              color: CF.pink,
+              fontSize: "0.82rem",
+              lineHeight: 1.6,
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        <div
+          style={{
+            marginTop: "1.2rem",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "0.7rem",
+          }}
+        >
+          {[
+            ["Valid", result ? "true" : "-"],
+            ["Masked", result?.masked || "-"],
+            ["Fingerprint", result ? `${result.fingerprint.slice(0, 14)}...` : "-"],
+            ["Decrypted", result?.decrypted || "-"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              style={{
+                border: `1px solid ${CF.border}`,
+                padding: "0.65rem",
+                background: CF.bg2,
+                minWidth: 0,
+              }}
+            >
+              <div
+                className="mono"
+                style={{ fontSize: "0.62rem", color: CF.textDim }}
+              >
+                {label}
+              </div>
+              <div
+                className="mono"
+                style={{
+                  fontSize: "0.78rem",
+                  color: label === "Valid" && result ? CF.green : CF.text,
+                  marginTop: "0.25rem",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            padding: "0.7rem 1rem",
+            background: CF.bg2,
+            borderBottom: `1px solid ${CF.border}`,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            className="mono"
+            style={{
+              fontSize: "0.7rem",
+              color: CF.textDim,
+              letterSpacing: "0.08em",
+            }}
+          >
+            INTERACTIVE TRACE
+          </span>
+          <Chip hi>{result ? `${result.ciphertext.length} chars` : "ready"}</Chip>
+        </div>
+        <div
+          style={{
+            padding: "0.85rem 1rem",
+            borderBottom: `1px solid ${CF.border}`,
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: "0.55rem",
+          }}
+        >
+          {(traceItems.length ? traceItems : tracePlaceholders).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSelectedTrace(item.id)}
+              disabled={!traceItems.length}
+              style={{
+                border: `1px solid ${
+                  selectedTrace === item.id ? CF.teal : CF.border
+                }`,
+                background:
+                  selectedTrace === item.id ? `${CF.teal}18` : CF.bg,
+                color: selectedTrace === item.id ? CF.teal : CF.textMid,
+                padding: "0.55rem 0.6rem",
+                fontFamily: "'IBM Plex Mono',monospace",
+                fontSize: "0.68rem",
+                cursor: traceItems.length ? "pointer" : "default",
+                textAlign: "left",
+              }}
+            >
+              <span style={{ color: item.mode === "decrypt" ? CF.green : CF.blue }}>
+                {item.mode === "decrypt" ? "DEC" : "ENC"}
+              </span>{" "}
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div
+          className="cf-code-scroll mono"
+          style={{
+            padding: "1rem",
+            color: CF.textMid,
+            lineHeight: 1.75,
+            fontSize: "0.78rem",
+          }}
+        >
+          {staleApiMessage && (
+            <div
+              style={{
+                border: `1px solid ${CF.pink}`,
+                background: `${CF.pink}10`,
+                color: CF.pink,
+                padding: "0.7rem",
+                marginBottom: "0.85rem",
+                fontSize: "0.72rem",
+                lineHeight: 1.55,
+              }}
+            >
+              {staleApiMessage}
+            </div>
+          )}
+          <div>
+            <div style={{ color: CF.comment, marginBottom: "0.6rem" }}>
+              // {activeTrace?.operation || "select a trace step"}
+            </div>
+            <div style={{ color: CF.textDim, marginBottom: "0.35rem" }}>
+              input ({traceInputBytes} bytes)
+            </div>
+            <textarea
+              readOnly
+              value={displayTraceInput}
+              style={{
+                width: "100%",
+                minHeight: 88,
+                resize: "vertical",
+                border: `1px solid ${CF.border}`,
+                background: CF.bg,
+                color: CF.textMid,
+                padding: "0.65rem",
+                fontFamily: "'IBM Plex Mono',monospace",
+                fontSize: "0.68rem",
+                lineHeight: 1.55,
+                outline: "none",
+              }}
+            />
+            <div
+              style={{
+                color: CF.textDim,
+                marginTop: "0.75rem",
+                marginBottom: "0.35rem",
+              }}
+            >
+              output ({traceOutputBytes} bytes)
+            </div>
+            <textarea
+              readOnly
+              value={displayTraceOutput}
+              style={{
+                width: "100%",
+                minHeight: 130,
+                resize: "vertical",
+                border: `1px solid ${CF.border}`,
+                background: CF.bg,
+                color: activeTrace?.mode === "decrypt" ? CF.green : CF.teal,
+                padding: "0.65rem",
+                fontFamily: "'IBM Plex Mono',monospace",
+                fontSize: "0.68rem",
+                lineHeight: 1.55,
+                outline: "none",
+              }}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            borderTop: `1px solid ${CF.border}`,
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+          }}
+        >
+          {(result?.authorities || ["Bank", "Auditor", "Regulator"]).map(
+            (authority, index) => {
+              const label =
+                typeof authority === "string" ? authority : authority.label;
+              const publicBytes =
+                typeof authority === "string" ? "-" : authority.publicBytes;
+              const privateBytes =
+                typeof authority === "string" ? "-" : authority.privateBytes;
+              const publicKeyPreview =
+                typeof authority === "string" ? "public key pending" : authority.publicKeyPreview;
+              const privateKeyPreview =
+                typeof authority === "string" ? "private key pending" : authority.privateKeyPreview;
+              const authorityCiphertext =
+                encryptionStages[index]?.output ||
+                (result ? "(ciphertext missing from API response)" : "Run demo to generate ciphertext");
+              const authorityCiphertextPreview = `${String(authorityCiphertext).slice(0, 260)}${
+                String(authorityCiphertext).length > 260 ? "..." : ""
+              }`;
+
+              return (
+                <div
+                  key={label}
+                  style={{
+                    padding: "0.9rem 1rem",
+                    borderRight:
+                      !isMobile && index < 2 ? `1px solid ${CF.border}` : "none",
+                    borderBottom:
+                      isMobile && index < 2 ? `1px solid ${CF.border}` : "none",
+                    background: index % 2 ? CF.bg1 : CF.bg,
+                  }}
+                >
+                  <div
+                    className="mono"
+                    style={{ color: CF.blue, fontSize: "0.75rem" }}
+                  >
+                    Authority {index + 1}
+                  </div>
+                  <div
+                    style={{
+                      color: CF.text,
+                      fontSize: "0.9rem",
+                      margin: "0.35rem 0 0.6rem",
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    className="mono"
+                    style={{ color: CF.textDim, fontSize: "0.68rem", lineHeight: 1.7 }}
+                  >
+                    public: {publicBytes}B
+                    <br />
+                    private: {privateBytes}B local
+                    <br />
+                    layer: {result?.layerSizes[index] || "-"}B
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      marginTop: "0.65rem",
+                      padding: "0.55rem",
+                      background: CF.bg2,
+                      border: `1px solid ${CF.border}`,
+                      color: CF.textDim,
+                      fontSize: "0.58rem",
+                      lineHeight: 1.45,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    <span style={{ color: CF.green }}>pub.pem</span>
+                    {"\n"}
+                    {publicKeyPreview}
+                    {"\n\n"}
+                    <span style={{ color: CF.pink }}>priv.pem</span>
+                    {"\n"}
+                    {privateKeyPreview}
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      marginTop: "0.65rem",
+                      padding: "0.55rem",
+                      background: CF.bg,
+                      border: `1px solid ${CF.border}`,
+                      color: CF.teal,
+                      fontSize: "0.58rem",
+                      lineHeight: 1.45,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-all",
+                      overflowWrap: "anywhere",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <span style={{ color: CF.textDim }}>
+                      ciphertext after {label}
+                    </span>
+                    {"\n"}
+                    {authorityCiphertextPreview}
+                  </div>
+                </div>
+              );
+            },
+          )}
+        </div>
+        <div
+          style={{
+            borderTop: `1px solid ${CF.border}`,
+            padding: isMobile ? "1rem" : "1.1rem",
+            background: CF.bg1,
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              color: CF.textDim,
+              fontSize: "0.68rem",
+              letterSpacing: "0.08em",
+              marginBottom: "0.85rem",
+            }}
+          >
+            REVERSE DECRYPTION
+          </div>
+          <div style={{ display: "grid", gap: "0.65rem" }}>
+            {decryptionSteps.map((step, index) => (
+              <div
+                key={step.authority}
+                style={{
+                  border: `1px solid ${CF.border}`,
+                  borderLeft: `3px solid ${index === 2 ? CF.green : CF.teal}`,
+                  background: CF.bg2,
+                  padding: "0.75rem 0.85rem",
+                  minWidth: 0,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  <span
+                    className="mono"
+                    style={{ color: CF.blue, fontSize: "0.75rem" }}
+                  >
+                    {index + 1}. {step.authority}
+                  </span>
+                  <Chip hi={index === 2}>
+                    {index === 2 ? "key recovered" : "layer peeled"}
+                  </Chip>
+                </div>
+                <div
+                  className="mono"
+                  style={{
+                    color: CF.textMid,
+                    fontSize: "0.72rem",
+                    lineHeight: 1.7,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {step.operation}
+                </div>
+                <div
+                  className="mono"
+                  style={{
+                    color: CF.textDim,
+                    fontSize: "0.66rem",
+                    lineHeight: 1.7,
+                    marginTop: "0.35rem",
+                    minWidth: 0,
+                  }}
+                >
+                  {step.inputBytes || "-"}B input {"->"} {step.outputBytes || "-"}B output
+                  <br />
+                  <span
+                    style={{
+                      color: CF.green,
+                      display: "block",
+                      maxWidth: "100%",
+                      marginTop: "0.2rem",
+                      overflow: "hidden",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-all",
+                      whiteSpace: "normal",
+                    }}
+                  >
+                    {String(step.output || "(empty)").slice(0, 180)}
+                    {String(step.output || "").length > 220 ? "..." : ""}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: "0.8rem",
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+              gap: "0.6rem",
+            }}
+          >
+            {[
+              ["Split", result?.recovery ? `${result.recovery.totalShares} shares` : "-"],
+              ["Threshold", result?.recovery ? `${result.recovery.threshold} of ${result.recovery.totalShares}` : "-"],
+              ["Used", result?.recovery ? `shares ${result.recovery.usedShares.join(", ")}` : "-"],
+              ["Match", result?.recovery?.reconstructedMatchesOriginal ? "true" : "-"],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  border: `1px solid ${CF.border}`,
+                  background: CF.bg,
+                  padding: "0.6rem",
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{ color: CF.textDim, fontSize: "0.6rem" }}
+                >
+                  {label}
+                </div>
+                <div
+                  className="mono"
+                  style={{
+                    color: label === "Match" && value === "true" ? CF.green : CF.text,
+                    fontSize: "0.72rem",
+                    marginTop: "0.25rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── MAIN APP ─────────────────────────────────────────────── */
 export default function App() {
   const [step, setStep] = useState(0);
@@ -763,6 +1416,7 @@ export default function App() {
   const isTablet = w <= 1024;
 
   const rFeat = useReveal(),
+    rDemo = useReveal(),
     rHiw = useReveal(),
     rAad = useReveal(),
     rFaq = useReveal();
@@ -931,6 +1585,7 @@ export default function App() {
             style={{ display: "flex", gap: "0.1rem", overflow: "hidden" }}
           >
             {[
+              ["Demo", "#demo"],
               ["Features", "#features"],
               ["How it works", "#how-it-works"],
               ["Aadhaar", "#aadhaar"],
@@ -1048,6 +1703,45 @@ export default function App() {
                 ))}
               </div>
 
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.8rem",
+                  flexWrap: "wrap",
+                  marginTop: "2rem",
+                }}
+              >
+                <a
+                  href="#demo"
+                  style={{
+                    border: `1px solid ${CF.teal}`,
+                    background: CF.teal,
+                    color: CF.bg,
+                    fontFamily: "'IBM Plex Mono',monospace",
+                    fontSize: "0.82rem",
+                    fontWeight: 500,
+                    padding: "0.7rem 1rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  Open demo
+                </a>
+                <a
+                  href="#usage"
+                  style={{
+                    border: `1px solid ${CF.border}`,
+                    background: CF.bg1,
+                    color: CF.textMid,
+                    fontFamily: "'IBM Plex Mono',monospace",
+                    fontSize: "0.82rem",
+                    padding: "0.7rem 1rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  View API
+                </a>
+              </div>
+
               {/* Show npm box here on mobile since nav hides it */}
               {isMobile && (
                 <div style={{ marginTop: "2rem" }}>
@@ -1072,6 +1766,34 @@ export default function App() {
                 showCursor
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      <HR />
+
+      {/* ── DEMO SITE ── */}
+      <section id="demo" ref={rDemo} className="sec" style={{ background: CF.bg1 }}>
+        <div className="inner">
+          <div className="reveal" style={{ marginBottom: "2.5rem" }}>
+            <SectionLabel>Demo site</SectionLabel>
+            <H2>Try the Aadhaar flow.</H2>
+            <p
+              style={{
+                fontSize: "clamp(0.88rem,2vw,1rem)",
+                color: CF.textDim,
+                maxWidth: 620,
+                lineHeight: 1.75,
+              }}
+            >
+              Enter an Aadhaar-format number and the page runs the same
+              validation, masking, HMAC fingerprinting, and multi-authority
+              encryption/decryption sequence through a Node API that imports
+              the actual library.
+            </p>
+          </div>
+          <div className="reveal">
+            <DemoSite isMobile={isMobile} />
           </div>
         </div>
       </section>
