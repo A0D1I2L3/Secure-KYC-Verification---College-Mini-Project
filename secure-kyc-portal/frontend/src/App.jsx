@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 
 // ─── API base (matches your existing backend port) ────────────────────────────
-const API = "http://localhost:5000";
+const API = "https://secure-kyc-verification-college-mini.onrender.com";
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
